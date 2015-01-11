@@ -159,6 +159,8 @@ class JobDynamo < Sinatra::Base
     city = params[:city]
     logger.info category.class
     logger.info city
+
+
     get_jobs_cat_city_url(params[:category],params[:city]).to_json
   end
 
@@ -192,15 +194,16 @@ class JobDynamo < Sinatra::Base
     content_type:json
     logger.info "GET /api/v2/offers/#{params[:id]}"
     begin
-      @category = Category.find(params[:id])
-      cat = JSON.parse(@category.category)
-      cat2 = @category.category
-      city = JSON.parse(@category.city)
+      @jobs = Jobs.find(params[:id])
+      cat = JSON.parse(@jobs.category)
+      cat2 = @jobs.category
+      city = JSON.parse(@jobs.city)
+      result = @jobs.results
     rescue
       halt 400
     end
     logger.info({ category: cat, city: city }.to_json)
-    result = get_jobs_cat_city(cat, city).to_json
+    #result = get_jobs_cat_city(cat, city).to_json
     logger.info "result: #{result}\n"
     result
   end
@@ -253,4 +256,44 @@ class JobDynamo < Sinatra::Base
     end
     jobs.results
   end
+
+  post '/api/v3/offers' do
+    content_type:json
+
+    body = request.body.read
+    logger.info body
+    begin
+      req = JSON.parse(body)
+      logger.info req
+    rescue Exception => e
+      puts e.message
+      halt 400
+    end
+    id = nil
+    cat = req['category'].to_json
+    city = req['city'].to_json
+    Jobs.each do |x|
+      if x.category == cat
+        if x.city == city
+          if x.results == nil
+            halt 404
+          else
+            id = x.id
+          end
+        end
+      end
+    end
+
+
+    #cat = Category.new
+    #cat.category = req['category'].to_json
+    #cat.city = req['city'].to_json
+
+    if id != nil
+      redirect "/api/v2/offers/#{id}"
+    else
+      halt 404
+    end
+  end
+
 end
